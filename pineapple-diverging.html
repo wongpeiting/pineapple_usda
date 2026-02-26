@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>America Ditched the Can</title>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Franklin:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --fresh: #D4A012;
+            --fresh-light: #F0C93A;
+            --processed: #5C5C5C;
+            --processed-light: #888;
+            --ink: #1A1A1A;
+            --ink-soft: #4A4A4A;
+            --paper: #FEFDFB;
+            --rule: #E0DDD8;
+        }
+
+        body {
+            font-family: 'Libre Franklin', sans-serif;
+            background: var(--paper);
+            color: var(--ink);
+            padding: 40px 20px;
+        }
+
+        .chart-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Editorial Header */
+        .chart-header {
+            margin-bottom: 32px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--rule);
+            position: relative;
+        }
+
+        .kicker {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.7rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--fresh);
+            margin-bottom: 10px;
+        }
+
+        .headline {
+            font-family: 'Source Serif 4', serif;
+            font-size: clamp(1.8rem, 4vw, 2.4rem);
+            font-weight: 600;
+            line-height: 1.15;
+            color: var(--ink);
+            margin-bottom: 12px;
+            max-width: 580px;
+        }
+
+        .dek {
+            font-size: 1.05rem;
+            font-weight: 400;
+            color: var(--ink-soft);
+            line-height: 1.5;
+            max-width: 540px;
+        }
+
+        .header-legend {
+            position: absolute;
+            right: 0;
+            bottom: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        /* Chart Area */
+        .chart-body {
+            position: relative;
+        }
+
+        .chart-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 0 60px;
+        }
+
+        .chart-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
+        .chart-label.processed {
+            color: var(--processed);
+        }
+
+        .chart-label.fresh {
+            color: var(--fresh);
+        }
+
+        /* SVG Styles */
+        .year-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 11px;
+            font-weight: 500;
+            fill: var(--ink);
+        }
+
+        .value-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 10px;
+            font-weight: 400;
+        }
+
+        .value-label.processed {
+            fill: var(--processed);
+        }
+
+        .value-label.fresh {
+            fill: var(--fresh);
+        }
+
+        .bar-fresh {
+            fill: var(--fresh);
+        }
+
+        .bar-processed {
+            fill: var(--processed);
+        }
+
+        .center-axis {
+            stroke: var(--ink);
+            stroke-width: 1;
+        }
+
+        .grid-line {
+            stroke: var(--rule);
+            stroke-width: 1;
+            stroke-dasharray: 2,3;
+        }
+
+        .annotation-line {
+            stroke: var(--ink);
+            stroke-width: 1;
+        }
+
+        .annotation-text {
+            font-family: 'Libre Franklin', sans-serif;
+            font-size: 11px;
+            font-weight: 500;
+            fill: var(--ink);
+        }
+
+        .annotation-subtext {
+            font-family: 'Libre Franklin', sans-serif;
+            font-size: 10px;
+            font-weight: 400;
+            fill: var(--ink-soft);
+        }
+
+        .era-bracket {
+            stroke: var(--ink-soft);
+            stroke-width: 1;
+            fill: none;
+        }
+
+        .era-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9px;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            fill: var(--ink-soft);
+        }
+
+        .crossover-zone {
+            fill: var(--fresh);
+            opacity: 0.08;
+        }
+
+        .crossover-label {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 9px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            fill: var(--fresh);
+        }
+
+        /* Footer */
+        .chart-footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid var(--rule);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .chart-source {
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--ink-soft);
+            line-height: 1.6;
+        }
+
+        .chart-source span {
+            display: block;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--ink-soft);
+        }
+
+        .legend-swatch {
+            width: 12px;
+            height: 12px;
+        }
+
+        .legend-swatch.fresh {
+            background: var(--fresh);
+        }
+
+        .legend-swatch.processed {
+            background: var(--processed);
+        }
+    </style>
+</head>
+<body>
+    <article class="chart-container">
+        <header class="chart-header">
+            <p class="kicker">U.S. pineapple consumption over three decades</p>
+            <h1 class="headline">America Ditched the Can</h1>
+            <p class="dek">Fresh pineapple went from a sliver of American consumption to the dominant form, while canned and juice collapsed.</p>
+            </header>
+
+        <div class="chart-body">
+            <div class="chart-labels">
+                <span class="chart-label processed">← Share of processed (canned and juice)</span>
+                <span class="chart-label fresh">Share of fresh →</span>
+            </div>
+            <div id="butterfly-chart"></div>
+        </div>
+
+        <footer class="chart-footer">
+            <div class="chart-source">
+                <span>Source: USDA, National Agricultural Statistics Service, U.S. Department of Commerce, and Bureau of the Census</span>
+            </div>
+        </footer>
+    </article>
+
+    <script>
+        // Actual USDA data - fresh % calculated from per capita lbs
+        const data = [
+            { year: 1995, fresh: 15, processed: 85 },
+            { year: 1998, fresh: 25, processed: 75 },
+            { year: 2000, fresh: 25, processed: 75 },
+            { year: 2002, fresh: 29, processed: 71 },
+            { year: 2004, fresh: 34, processed: 66 },
+            { year: 2006, fresh: 37, processed: 63 },
+            { year: 2008, fresh: 38, processed: 62 },
+            { year: 2010, fresh: 45, processed: 55 },
+            { year: 2012, fresh: 47, processed: 53 },
+            { year: 2014, fresh: 51, processed: 49 },  // ← CROSSOVER
+            { year: 2016, fresh: 51, processed: 49 },
+            { year: 2018, fresh: 59, processed: 41 },
+            { year: 2020, fresh: 58, processed: 42 },
+            { year: 2022, fresh: 56, processed: 44 },
+            { year: 2024, fresh: 65, processed: 35 }
+        ];
+
+        const colors = {
+            fresh: '#D4A012',
+            processed: '#5C5C5C',
+            ink: '#1A1A1A',
+            inkSoft: '#4A4A4A',
+            rule: '#E0DDD8'
+        };
+
+        function renderButterflyChart() {
+            const container = document.getElementById('butterfly-chart');
+            const containerWidth = container.clientWidth || 800;
+
+            const margin = { top: 5, right: 55, bottom: 5, left: 55 };
+            const width = Math.min(800, containerWidth) - margin.left - margin.right;
+            const height = 520 - margin.top - margin.bottom;
+
+            const svg = d3.select('#butterfly-chart')
+                .append('svg')
+                .attr('viewBox', `0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet')
+                .style('width', '100%')
+                .style('height', 'auto')
+                .append('g')
+                .attr('transform', `translate(${margin.left},${margin.top})`);
+
+            const centerX = width / 2;
+            const maxBarWidth = centerX - 45;
+
+            const yScale = d3.scaleBand()
+                .domain(data.map(d => d.year))
+                .range([0, height])
+                .padding(0.25);
+
+            const xScale = d3.scaleLinear()
+                .domain([0, 100])
+                .range([0, maxBarWidth]);
+
+            // Gap from center for year labels
+            const gap = 22;
+
+            // Crossover highlight zone (2014)
+            const crossoverIndex = data.findIndex(d => d.fresh > 50);
+            if (crossoverIndex !== -1) {
+                const crossoverYear = data[crossoverIndex].year;
+                const zoneY = yScale(crossoverYear) - yScale.step() * 0.3;
+                const zoneHeight = yScale.bandwidth() + yScale.step() * 0.6;
+
+                svg.append('rect')
+                    .attr('x', 0)
+                    .attr('y', zoneY)
+                    .attr('width', width)
+                    .attr('height', zoneHeight)
+                    .attr('class', 'crossover-zone');
+
+                svg.append('text')
+                    .attr('x', width + 8)
+                    .attr('y', zoneY + zoneHeight / 2 + 3)
+                    .attr('class', 'crossover-label')
+                    .text('50-50');
+            }
+
+            // Grid lines at 25%, 50%, 75%
+            [25, 50, 75].forEach(pct => {
+                // Left side
+                svg.append('line')
+                    .attr('x1', centerX - xScale(pct) - gap)
+                    .attr('y1', 0)
+                    .attr('x2', centerX - xScale(pct) - gap)
+                    .attr('y2', height)
+                    .attr('class', 'grid-line');
+
+                // Right side
+                svg.append('line')
+                    .attr('x1', centerX + xScale(pct) + gap)
+                    .attr('y1', 0)
+                    .attr('x2', centerX + xScale(pct) + gap)
+                    .attr('y2', height)
+                    .attr('class', 'grid-line');
+            });
+
+            // Draw bars and labels
+            data.forEach((d, i) => {
+                const y = yScale(d.year);
+                const barHeight = yScale.bandwidth();
+
+                // Processed bar (left)
+                svg.append('rect')
+                    .attr('x', centerX - xScale(d.processed) - gap)
+                    .attr('y', y)
+                    .attr('width', xScale(d.processed))
+                    .attr('height', barHeight)
+                    .attr('class', 'bar-processed')
+                    .attr('rx', 1);
+
+                // Fresh bar (right)
+                svg.append('rect')
+                    .attr('x', centerX + gap)
+                    .attr('y', y)
+                    .attr('width', xScale(d.fresh))
+                    .attr('height', barHeight)
+                    .attr('class', 'bar-fresh')
+                    .attr('rx', 1);
+
+                // Year label (in center)
+                svg.append('text')
+                    .attr('x', centerX)
+                    .attr('y', y + barHeight / 2 + 4)
+                    .attr('text-anchor', 'middle')
+                    .attr('class', 'year-label')
+                    .text(d.year);
+
+                // Value labels - only show for key years
+                const showLabel = [1995, 2006, 2014, 2020, 2024].includes(d.year);
+
+                if (showLabel) {
+                    svg.append('text')
+                        .attr('x', centerX - xScale(d.processed) - gap - 6)
+                        .attr('y', y + barHeight / 2 + 3)
+                        .attr('text-anchor', 'end')
+                        .attr('class', 'value-label processed')
+                        .text(d.processed + '%');
+
+                    svg.append('text')
+                        .attr('x', centerX + xScale(d.fresh) + gap + 6)
+                        .attr('y', y + barHeight / 2 + 3)
+                        .attr('text-anchor', 'start')
+                        .attr('class', 'value-label fresh')
+                        .text(d.fresh + '%');
+                }
+            });
+
+            // Era brackets and labels (left side)
+            const eraData = [
+                { start: 1995, end: 2006, label: 'Processed era' },
+                { start: 2014, end: 2024, label: 'Fresh era' }
+            ];
+
+            eraData.forEach(era => {
+                const startY = yScale(era.start);
+                const endY = yScale(era.end) + yScale.bandwidth();
+                const bracketX = -40;
+
+                // Bracket
+                svg.append('path')
+                    .attr('d', `M ${bracketX + 8} ${startY}
+                               L ${bracketX} ${startY}
+                               L ${bracketX} ${endY}
+                               L ${bracketX + 8} ${endY}`)
+                    .attr('class', 'era-bracket');
+
+                // Label
+                svg.append('text')
+                    .attr('transform', `translate(${bracketX - 6}, ${(startY + endY) / 2}) rotate(-90)`)
+                    .attr('text-anchor', 'middle')
+                    .attr('class', 'era-label')
+                    .text(era.label);
+            });
+
+            // Key annotation: 1995 starting point (positioned horizontally to the right)
+            const anno1995Y = yScale(1995) + yScale.bandwidth() / 2;
+            const label1995X = centerX + gap + xScale(15) + 6 + 26; // bar end + value label width
+            svg.append('line')
+                .attr('x1', label1995X + 4)
+                .attr('y1', anno1995Y)
+                .attr('x2', label1995X + 20)
+                .attr('y2', anno1995Y)
+                .attr('class', 'annotation-line');
+
+            svg.append('text')
+                .attr('x', label1995X + 25)
+                .attr('y', anno1995Y - 4)
+                .attr('class', 'annotation-text')
+                .text('Fresh pineapples once a niche');
+
+            svg.append('text')
+                .attr('x', label1995X + 25)
+                .attr('y', anno1995Y + 9)
+                .attr('class', 'annotation-subtext')
+                .text('About 2 lbs per person each year');
+
+            // Key annotation: 2024 ending point (positioned horizontally to the right)
+            const anno2024Y = yScale(2024) + yScale.bandwidth() / 2;
+            const label2024X = centerX + gap + xScale(65) + 6 + 26; // bar end + value label width
+            svg.append('line')
+                .attr('x1', label2024X + 4)
+                .attr('y1', anno2024Y)
+                .attr('x2', label2024X + 20)
+                .attr('y2', anno2024Y)
+                .attr('class', 'annotation-line');
+
+            svg.append('text')
+                .attr('x', label2024X + 25)
+                .attr('y', anno2024Y - 4)
+                .attr('class', 'annotation-text')
+                .text('Fresh dominates');
+
+            svg.append('text')
+                .attr('x', label2024X + 25)
+                .attr('y', anno2024Y + 9)
+                .attr('class', 'annotation-subtext')
+                .text('A record 8.5 lbs per person');
+        }
+
+        renderButterflyChart();
+
+        // Handle resize
+        window.addEventListener('resize', () => {
+            document.getElementById('butterfly-chart').innerHTML = '';
+            renderButterflyChart();
+        });
+    </script>
+</body>
+</html>
